@@ -29,6 +29,15 @@ pub struct Number {
     pub positions: Vec<Pos>,
 }
 
+impl Number {
+    pub fn is_adjacent_to(&self, locations: &HashSet<&Pos>) -> bool {
+        self.positions
+            .iter()
+            .flat_map(|pos| pos.neighbors())
+            .any(|neighbor| locations.contains(&neighbor))
+    }
+}
+
 #[derive(Debug, PartialEq, Eq)]
 pub struct Symbol {
     pub char: char,
