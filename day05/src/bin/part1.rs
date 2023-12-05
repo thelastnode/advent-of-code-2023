@@ -1,4 +1,4 @@
-use std::{env::args, fs};
+use std::{collections::HashMap, env::args, fs};
 
 use nom::{
     bytes::complete::tag,
@@ -46,7 +46,6 @@ impl<'a> Map<'a> {
         let (input, to) = alpha1(input)?;
         let (input, _) = tag(" map:\n")(input)?;
         let (input, entries) = separated_list1(tag("\n"), MapEntry::parse)(input)?;
-        // let (input, _) = tag("\n")(input)?;
 
         Ok((input, Map { from, to, entries }))
     }
@@ -61,7 +60,6 @@ fn parse_seeds(input: &str) -> IResult<&str, Vec<i64>> {
 }
 
 fn parse(input: &str) -> (Vec<i64>, Vec<Map>) {
-    dbg!(&input);
     let (input, seeds) = parse_seeds(input).unwrap();
     let (input, maps) = separated_list1(tag("\n\n"), Map::parse)(input).unwrap();
 
@@ -70,9 +68,46 @@ fn parse(input: &str) -> (Vec<i64>, Vec<Map>) {
     (seeds, maps)
 }
 
+fn follow_maps(map_by_type: &HashMap<&str, Map>, seed: i64, destination_type: &str) -> i64 {
+    let mut value = seed;
+    let mut current_type = "seed";
+
+    while current_type != destination_type {
+        let found_value = map_by_type.get(current_type).unwrap().entries.iter().fold(
+            None,
+            |found_value, entry| match found_value {
+                None => {
+                    if (entry.source..(entry.source + entry.length)).contains(&value) {
+                        Some(entry.destination + (value - entry.source))
+                    } else {
+                        None
+                    }
+                }
+                Some(_) => found_value,
+            },
+        );
+        if let Some(new_value) = found_value {
+            value = new_value;
+        }
+        current_type = map_by_type.get(current_type).unwrap().to;
+    }
+
+    value
+}
+
 fn main() {
     let input = fs::read_to_string(args().nth(1).unwrap()).unwrap();
-    dbg!(parse(&input));
+    let (seeds, maps) = parse(&input);
+    let map_by_type: HashMap<&str, Map> =
+        HashMap::from_iter(maps.into_iter().map(|map| (map.from, map)));
+
+    const DEST: &str = "location";
+    let result = seeds
+        .iter()
+        .map(|&seed| follow_maps(&map_by_type, seed, DEST))
+        .min()
+        .unwrap();
+    dbg!(result);
 }
 
 #[cfg(test)]
