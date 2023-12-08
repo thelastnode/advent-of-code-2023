@@ -1,5 +1,6 @@
 use std::{cell::OnceCell, collections::HashMap, env::args, fs};
 
+use day07::array_to_index_map;
 use itertools::Itertools;
 use once_cell::sync::Lazy;
 
@@ -25,11 +26,8 @@ impl Card {
 }
 
 static CARD_ORDERING: Lazy<HashMap<char, usize>> = Lazy::new(|| {
-    ['A', 'K', 'Q', 'J', 'T']
-        .into_iter()
-        .rev()
-        .enumerate()
-        .map(|(i, x)| (x, i + 10))
+    array_to_index_map(['A', 'K', 'Q', 'J', 'T'])
+        .map(|(x, i)| (x, i + 10))
         .collect()
 });
 
@@ -57,7 +55,7 @@ enum HandType {
 }
 
 static HAND_TYPE_ORDERING: Lazy<HashMap<HandType, usize>> = Lazy::new(|| {
-    [
+    array_to_index_map([
         HandType::FiveOfAKind,
         HandType::FourOfAKind,
         HandType::FullHouse,
@@ -65,11 +63,7 @@ static HAND_TYPE_ORDERING: Lazy<HashMap<HandType, usize>> = Lazy::new(|| {
         HandType::TwoPair,
         HandType::OnePair,
         HandType::HighCard,
-    ]
-    .into_iter()
-    .rev()
-    .enumerate()
-    .map(|(i, x)| (x, i))
+    ])
     .collect()
 });
 
