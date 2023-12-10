@@ -22,7 +22,7 @@ pub fn process_sensor(
     loop {
         let diffs = current
             .iter()
-            .zip(current.iter().skip(1))
+            .tuple_windows()
             .map(|(a, b)| b - a)
             .collect_vec();
 
