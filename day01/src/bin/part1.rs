@@ -1,7 +1,5 @@
 use std::{env::args, fs};
 
-use day01::*;
-
 fn digits(line: &str) -> Vec<u32> {
     line.chars()
         .filter(|c| c.is_numeric())
@@ -11,9 +9,8 @@ fn digits(line: &str) -> Vec<u32> {
 
 fn main() {
     let input = fs::read_to_string(args().nth(1).unwrap()).unwrap();
-    let lines = parse(&input);
-    let sum = lines
-        .iter()
+    let sum = input
+        .lines()
         .map(|line| {
             let digs = digits(line);
             let [first, last] = [digs.first().unwrap(), digs.last().unwrap()];
