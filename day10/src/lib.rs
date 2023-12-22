@@ -1,5 +1,6 @@
 use std::{
-    collections::{HashMap, HashSet},
+    collections::{HashMap, HashSet, VecDeque},
+    hash::Hash,
     ops::Add,
 };
 
@@ -194,4 +195,36 @@ impl CellType {
             CellType::Start => panic!("Start location should be inferred first"),
         }
     }
+}
+
+pub fn bfs<QueueType, VisitedType>(
+    start: impl Iterator<Item = QueueType>,
+    get_neighbors: impl Fn(&QueueType) -> Vec<QueueType>,
+    get_visit_key: impl Fn(&QueueType) -> VisitedType,
+) -> HashMap<VisitedType, QueueType>
+where
+    VisitedType: Eq + Hash,
+{
+    let mut queue: VecDeque<QueueType> = VecDeque::from_iter(start);
+    let mut visited: HashMap<VisitedType, QueueType> = HashMap::new();
+
+    while let Some(next) = queue.pop_front() {
+        let key = get_visit_key(&next);
+
+        if visited.contains_key(&key) {
+            continue;
+        }
+
+        let neighbors = get_neighbors(&next);
+        visited.insert(key, next);
+
+        for neighbor in neighbors {
+            let key = get_visit_key(&neighbor);
+            if !visited.contains_key(&key) {
+                queue.push_back(neighbor);
+            }
+        }
+    }
+
+    visited
 }

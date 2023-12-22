@@ -1,11 +1,11 @@
 use std::{
-    collections::{HashMap, HashSet, VecDeque},
+    collections::{HashMap, HashSet},
     env::args,
     error::Error,
     fs,
 };
 
-use day10::{CellType, Grid, Position};
+use day10::{bfs, CellType, Grid, Position};
 use itertools::Itertools;
 
 fn double_grid(grid: &Grid, pipes: &HashSet<Position>) -> Grid {
@@ -30,7 +30,7 @@ fn double_grid(grid: &Grid, pipes: &HashSet<Position>) -> Grid {
         .flat_map(|(pos, cell_type)| pos.connected_pipes(cell_type))
         .collect_vec();
     for neighbor in neighboring_pipes {
-        new_cells.insert(neighbor, CellType::Horizontal);
+        new_cells.insert(neighbor, CellType::Horizontal); // any cell type is fine
     }
 
     let grounds_to_fill = (0..(grid.size.0 * 2))
@@ -56,25 +56,15 @@ fn main() -> Result<(), Box<dyn Error>> {
     let input = fs::read_to_string(args().nth(1).unwrap())?;
     let grid = Grid::parse(&input);
 
-    let mut queue = VecDeque::from_iter([grid.start_position.clone()]);
-    let mut visited = HashSet::new();
+    let grid = {
+        let visited = bfs(
+            [grid.start_position.clone()].into_iter(),
+            |pos| pos.connected_pipes(&grid.cells[pos]).collect_vec(),
+            |pos| pos.clone(),
+        );
 
-    while let Some(pos) = queue.pop_front() {
-        if visited.contains(&pos) {
-            continue;
-        }
-
-        let connected_pipes = pos.connected_pipes(&grid.cells[&pos]).collect_vec();
-        visited.insert(pos);
-
-        for connected_pipe in connected_pipes {
-            if !visited.contains(&connected_pipe) {
-                queue.push_back(connected_pipe);
-            }
-        }
-    }
-
-    let grid = double_grid(&grid, &visited);
+        double_grid(&grid, &visited.into_values().collect())
+    };
 
     let grounds_along_edge = grid
         .cells
@@ -84,44 +74,41 @@ fn main() -> Result<(), Box<dyn Error>> {
         })
         .filter_map(|(pos, cell_type)| (*cell_type == CellType::Ground).then_some(pos.clone()));
 
-    let mut queue = VecDeque::from_iter(grounds_along_edge);
-    let mut visited = HashSet::new();
-
-    while let Some(pos) = queue.pop_front() {
-        if visited.contains(&pos) {
-            continue;
-        }
-
-        let neighbors = pos
-            .neighbors(&grid.size)
+    let get_neighboring_ground_cells = |pos: &Position| {
+        pos.neighbors(&grid.size)
             .filter(|neighbor| grid.cells[neighbor] == CellType::Ground)
-            .collect_vec();
-        visited.insert(pos);
+            .collect_vec()
+    };
 
-        for neighbor in neighbors {
-            if !visited.contains(&neighbor) {
-                queue.push_back(neighbor);
-            }
-        }
-    }
+    let outside_ground_cells: HashSet<Position> = {
+        let get_visit_key = |pos: &Position| pos.clone();
+        let visited = bfs(
+            grounds_along_edge,
+            get_neighboring_ground_cells,
+            get_visit_key,
+        );
+        visited.into_values().collect()
+    };
 
-    let mut ground_count = 0;
-    let mut inside_count = 0;
-
-    for (row, col) in (0..grid.size.0)
+    let grid_coords = (0..grid.size.0)
         .step_by(2)
-        .cartesian_product((0..grid.size.1).step_by(2))
-    {
-        let pos = Position { row, col };
-
-        if grid.cells[&pos] == CellType::Ground {
-            ground_count += 1;
-
-            if !visited.contains(&pos) {
-                inside_count += 1;
-            }
-        }
-    }
+        .cartesian_product((0..grid.size.1).step_by(2));
+    let (ground_count, inside_count) = grid_coords
+        .map(|(row, col)| Position { row, col })
+        .map(|pos| {
+            let is_ground = grid.cells[&pos] == CellType::Ground;
+            let is_inside = !outside_ground_cells.contains(&pos);
+            (is_ground, is_inside)
+        })
+        .fold(
+            (0, 0),
+            |(ground_count, inside_count), (is_ground, is_inside)| {
+                (
+                    ground_count + if is_ground { 1 } else { 0 },
+                    inside_count + if is_ground && is_inside { 1 } else { 0 },
+                )
+            },
+        );
 
     println!("{inside_count} / {ground_count}");
 
