@@ -23,12 +23,10 @@ pub fn get_distance_sum(input: &str, scaling_factor: i64) -> i64 {
         .enumerate()
         .filter(|(_, row)| !row.iter().any(|&c| c))
         .map(|(i, _)| i)
-        .rev() // reverse to avoid shifting indices
         .collect_vec();
 
     let cols_to_double = (0..grid[0].len())
         .filter(|&col| !grid.iter().any(|row| row[col]))
-        .rev()
         .collect_vec();
 
     let positions = find_positions(&grid);
